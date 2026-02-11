@@ -1,0 +1,17 @@
+[package]
+name = "cryptono-zip"
+version = "0.1.0"
+edition = "2021"
+authors = ["Artur Charylo"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# CLI Argument Parser - standard przemysłowy
+clap = { version = "4.5.58", features = ["derive"] }
+
+# Error handling - sprawia, że obsługa błędów jest przyjemna
+anyhow = "1.0.101"
+
+# Bit manipulation - przyda się do Huffmana (zapisywanie pojedynczych bitów)
+bit-vec = "0.8.0"
