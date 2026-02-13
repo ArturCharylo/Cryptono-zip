@@ -1,4 +1,4 @@
-use std::{collections::BinaryHeap, fmt::Write};
+use std::{collections::{BinaryHeap, HashMap}};
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -42,55 +42,68 @@ impl Node {
     }
 }
 
-pub fn build_tree(){
+pub fn build_tree(freq_map: HashMap<char, u32>) -> Option<Node>{
     let mut heap = BinaryHeap::new();
 
-    heap.push(Node::new_leaf(5,'a'));
-    heap.push(Node::new_leaf(10, 'b'));
-    heap.push(Node::new_leaf(20, 'c'));
+    for (chr, freq) in freq_map{
+        heap.push(Node::new_leaf(freq, chr));
+    }
 
-    while let Some(node) = heap.pop() {
-        println!("Got frequency of: {} from heap", node.freq)
+    while heap.len() > 1 {
+        let left_node = heap.pop().unwrap();
+        let right_node = heap.pop().unwrap();
+
+        heap.push(Node::new_internal(left_node.freq + right_node.freq, left_node, right_node));
+    }
+    heap.pop()
+}
+
+pub fn calculat_freq(input: &str) -> std::collections::HashMap<char, u32> {
+    let mut freq_map: HashMap<char, u32> = std::collections::HashMap::new();
+    for chr in input.chars() {
+        let count = freq_map.entry(chr).or_insert(0);
+        *count += 1;
+    }
+    freq_map
+}
+
+fn generate_codes(node: &Node, current_code: String, codes: &mut HashMap<char, String>) {
+    if let Some(chr) = node.ch {
+        codes.insert(chr, current_code);
+        return; 
+    }
+
+    if let Some(ref left) = node.left {
+        let mut left_code = current_code.clone();
+        left_code.push('0');
+        generate_codes(left, left_code, codes);
+    }
+
+    if let Some(ref right) = node.right {
+        let mut right_code = current_code.clone();
+        right_code.push('1');
+        generate_codes(right, right_code, codes);
     }
 }
 
 pub fn compress_data(input: &str) -> String {
-    if input.is_empty() {
-        return String::new();
+    let freq_map = calculat_freq(input);
+    let root = build_tree(freq_map);
+
+    let mut codes = HashMap::new();
+    if let Some(tree_root) = root {
+        generate_codes(&tree_root, String::new(), &mut codes);
     }
 
     let mut compressed = String::new();
-
-    let mut chars = input.chars().peekable();
-
-    while let Some(curr) = chars.next() {
-        let mut count = 1;
-
-        while chars.peek() == Some(&curr) {
-            count += 1;
-            chars.next();
-        }
-
-        let _ = write!(compressed, "{}{}", count, curr);
+    
+    for chr in input.chars() {
+        compressed.push_str(codes.get(&chr).expect("No Huffman code found"));
     }
     compressed
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_simple_rle() {
-        assert_eq!(compress_data("AAAAABBBCC"), "5A3B2C");
-    }
-
-    #[test]
-    fn test_single_chars() {
-        assert_eq!(compress_data("ABC"), "1A1B1C");
-    }
-    
-    #[test]
-    fn test_empty() {
-        assert_eq!(compress_data(""), "");
-    }
 }
