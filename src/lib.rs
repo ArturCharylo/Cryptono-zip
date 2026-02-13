@@ -1,5 +1,17 @@
 use std::fmt::Write;
 
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.freq.cmp(&self.freq)
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)] 
 pub struct Node {
     pub freq: u32,
