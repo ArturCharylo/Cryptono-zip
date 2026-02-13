@@ -1,4 +1,4 @@
-use std::fmt::Write;
+use std::{collections::BinaryHeap, fmt::Write};
 
 impl PartialOrd for Node {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -39,6 +39,18 @@ impl Node {
             left: Some(Box::new(left)),
             right: Some(Box::new(right)),
         }
+    }
+}
+
+pub fn build_tree(){
+    let mut heap = BinaryHeap::new();
+
+    heap.push(Node::new_leaf(5,'a'));
+    heap.push(Node::new_leaf(10, 'b'));
+    heap.push(Node::new_leaf(20, 'c'));
+
+    while let Some(node) = heap.pop() {
+        println!("Got frequency of: {} from heap", node.freq)
     }
 }
 
