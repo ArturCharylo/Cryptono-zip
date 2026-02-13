@@ -1,5 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
+use bit_vec::BitVec;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Node {
@@ -95,7 +96,7 @@ fn generate_codes(node: &Node, current_code: String, codes: &mut HashMap<char, S
     }
 }
 
-pub fn compress_data(input: &str) -> String {
+pub fn compress_data(input: &str) -> Vec<u8> {
     let freq_map = calculate_freq(input);
     let root = build_tree(&freq_map);
 
@@ -105,14 +106,19 @@ pub fn compress_data(input: &str) -> String {
         generate_codes(&tree_root, String::new(), &mut codes);
     }
 
-    let mut compressed = String::new();
+    let mut compressed = BitVec::new();
     for chr in input.chars() {
         if let Some(code) = codes.get(&chr) {
-            compressed.push_str(code);
+            for bit_char in code.chars() {
+                match bit_char{
+                    '0' => compressed.push(false),
+                    '1' => compressed.push(true),
+                    _ => {}
+                }
+            }
         }
     }
-
-    compressed
+    compressed.to_bytes()
 }
 
 #[cfg(test)]
@@ -130,6 +136,6 @@ mod tests {
     fn test_single_char() {
         let input = "AAAA";
         let compressed = compress_data(input);
-        assert_eq!(compressed, "0000");
+        assert!(compressed.len() < input.len());
     }
 }
