@@ -1,5 +1,35 @@
 use std::fmt::Write;
 
+#[derive(Debug, Eq, PartialEq)] 
+pub struct Node {
+    pub freq: u32,
+    pub ch: Option<char>,
+    pub left: Option<Box<Node>>,
+    pub right: Option<Box<Node>>,
+}
+
+impl Node {
+    // List node constructor
+    pub fn new_leaf(freq: u32, ch: char) -> Node {
+        Node {
+            freq,
+            ch: Some(ch),
+            left: None,
+            right: None,
+        }
+    }
+
+    // Inner node constructuor
+    pub fn new_internal(freq: u32, left: Node, right: Node) -> Node {
+        Node {
+            freq,
+            ch: None,
+            left: Some(Box::new(left)),
+            right: Some(Box::new(right)),
+        }
+    }
+}
+
 pub fn compress_data(input: &str) -> String {
     if input.is_empty() {
         return String::new();
