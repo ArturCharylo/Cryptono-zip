@@ -24,7 +24,12 @@ fn main() -> Result<()> {
 
     let compressed = compress_data(&content);
 
-    println!("Compressed info: {}", compressed);
+    println!("Compressed data length: {:?}", compressed.len());
+
+    let ratio = (1.0 - (compressed.len() as f64 / content.len() as f64)) * 100.0;
+    println!("Compression ratio: {:.2}%", ratio);
+
+
 
     Ok(())
 }
