@@ -10,8 +10,8 @@ pub fn compress(input: &[u8]) -> Vec<LZ77Token> {
     let mut tokens = Vec::new();
     let mut cursor = 0;
     
-    let window_size: usize = 4096; // 4KB
-    let min_match_len: usize = 3;
+    let window_size: usize = 4096; 
+    let min_match_len: usize = 3;  
 
     while cursor < input.len() {
         let (distance, length) = find_longest_match(input, cursor, window_size);
@@ -33,9 +33,9 @@ pub fn compress(input: &[u8]) -> Vec<LZ77Token> {
 
 fn find_longest_match(input: &[u8], cursor: usize, window_size: usize) -> (usize, usize) {
     let start_window = if cursor > window_size { cursor - window_size } else { 0 };
-
+    
     let dictionary = &input[start_window..cursor];
-    let lookahead = &input[cursor..];
+    let lookahead = &input[cursor..]; 
 
     if lookahead.is_empty() {
         return (0, 0);
@@ -43,13 +43,15 @@ fn find_longest_match(input: &[u8], cursor: usize, window_size: usize) -> (usize
 
     let mut best_len = 0;
     let mut best_dist = 0;
-
     let max_match = cmp::min(lookahead.len(), 255);
-    
+
     for i in 0..dictionary.len() {
         let mut len = 0;
         
-        while len < max_match && dictionary[i + len] == lookahead[len] {
+        while len < max_match 
+            && (i + len) < dictionary.len() 
+            && dictionary[i + len] == lookahead[len] 
+        {
             len += 1;
         }
 
