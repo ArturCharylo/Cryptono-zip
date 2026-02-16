@@ -1,38 +1,63 @@
-#[derive(Debug)]
-struct Token{
-    offset: u32,
-    length: u32,
-    next_char: Option<char>,
+use std::cmp;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LZ77Token {
+    Literal(u8),
+    Reference { distance: u16, length: u16 },
 }
 
-fn lz77_compress(input: &str, window_size: usize) -> Vec<Token>{
+pub fn compress(input: &[u8]) -> Vec<LZ77Token> {
     let mut tokens = Vec::new();
-    let chars: Vec<char> = input.chars().collect();
     let mut cursor = 0;
+    
+    let window_size: usize = 4096; // 4KB
+    let min_match_len: usize = 3;
 
-    while cursor < chars.len(){
-        let (offset, length) = find_match(&chars, cursor, window_size);
-        let next_char = chars.get(cursor + length as usize).cloned();
-        
-        tokens.push(Token { offset, length, next_char });
-        
-        cursor += (length as usize) + 1;
+    while cursor < input.len() {
+        let (distance, length) = find_longest_match(input, cursor, window_size);
+
+        if length >= min_match_len {
+            tokens.push(LZ77Token::Reference {
+                distance: distance as u16,
+                length: length as u16,
+            });
+            cursor += length;
+        } else {
+            tokens.push(LZ77Token::Literal(input[cursor]));
+            cursor += 1;
+        }
     }
+
     tokens
 }
 
-fn find_match(input: &[char], cursor: usize, window_size: usize) -> (u32, u32){
-    let start = if cursor > window_size { cursor - window_size } else { 0 };
-    let dictionary = &input[start..cursor];
+fn find_longest_match(input: &[u8], cursor: usize, window_size: usize) -> (usize, usize) {
+    let start_window = if cursor > window_size { cursor - window_size } else { 0 };
+
+    let dictionary = &input[start_window..cursor];
     let lookahead = &input[cursor..];
 
-    for len in (1..=lookahead.len()).rev(){
-        let curr_match = &lookahead[0..len];
-        if let Some(i) = dictionary.windows(len).position(|window| window == curr_match) {
-            let offset = (dictionary.len() - i) as u32;
-            let length = len as u32;
-            return (offset, length);
+    if lookahead.is_empty() {
+        return (0, 0);
+    }
+
+    let mut best_len = 0;
+    let mut best_dist = 0;
+
+    let max_match = cmp::min(lookahead.len(), 255);
+    
+    for i in 0..dictionary.len() {
+        let mut len = 0;
+        
+        while len < max_match && dictionary[i + len] == lookahead[len] {
+            len += 1;
+        }
+
+        if len > best_len {
+            best_len = len;
+            best_dist = dictionary.len() - i;
         }
     }
-    (0,0)
+
+    (best_dist, best_len)
 }
