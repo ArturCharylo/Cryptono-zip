@@ -2,7 +2,8 @@ use clap::Parser;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
-use cryptono_zip::{compress, Strategy};
+
+use cryptono_zip::{compress_brotli, compress_deflate};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -12,6 +13,9 @@ struct Cli {
 
     #[arg(short, long, value_name = "OUTPUT")]
     output: Option<PathBuf>,
+
+    #[arg(short, long, default_value = "brotli")]
+    algo: String,
 }
 
 fn main() -> Result<()> {
@@ -22,7 +26,17 @@ fn main() -> Result<()> {
 
     println!("Original size: {} bytes", content.len());
 
-    let compressed = compress(&content, Strategy::Deflate);
+    // Choose based on flag --algo
+    let compressed = match cli.algo.as_str() {
+        "deflate" => {
+            println!("Using algorithm: Deflate (ZIP standard)");
+            compress_deflate(&content)
+        },
+        _ => { // Default to Brotli
+            println!("Using algorithm: Brotli (Google standard)");
+            compress_brotli(&content, 6) 
+        }
+    };
 
     println!("Compressed data length: {} bytes", compressed.len());
 
@@ -33,12 +47,14 @@ fn main() -> Result<()> {
 
     let output_path = cli.output.unwrap_or_else(|| {
         let mut path = cli.input.clone();
+        let ext = if cli.algo == "deflate" { "deflate" } else { "br" };
+        
         if let Some(extension) = path.extension() {
-            let mut ext = extension.to_os_string();
-            ext.push(".czip");
-            path.set_extension(ext);
+            let mut new_ext = extension.to_os_string();
+            new_ext.push(format!(".{}", ext));
+            path.set_extension(new_ext);
         } else {
-            path.set_extension("czip");
+            path.set_extension(ext);
         }
         path
     });

@@ -1,72 +1,48 @@
-pub mod algorithms;
+use wasm_bindgen::prelude::*;
+use std::io::Write;
 
-use algorithms::{huffman, lz77};
-use algorithms::lz77::LZ77Token;
-
-pub enum Strategy {
-    HuffmanOnly,
-    LZ77Only,
-    Deflate,
+// Runs once on mount
+#[wasm_bindgen(start)]
+pub fn main_js() {
+    console_error_panic_hook::set_once();
 }
 
-pub fn compress(input: &[u8], strategy: Strategy) -> Vec<u8> {
-    match strategy {
-        Strategy::HuffmanOnly => huffman::compress(input),
-        
-        Strategy::LZ77Only => {
-            let tokens = lz77::compress(input);
-            serialize_tokens(&tokens)
-        },
-        
-        Strategy::Deflate => {
-            let tokens = lz77::compress(input);
-            let serialized = serialize_tokens(&tokens);
-            huffman::compress(&serialized)
-        }
-    }
+#[wasm_bindgen]
+pub fn compress_brotli(data: &[u8], quality: u32) -> Vec<u8> {
+    let mut compressor = brotli::CompressorWriter::new(Vec::new(), 4096, quality, 22);
+    
+    compressor.write_all(data).expect("Brotli compression failed");
+    compressor.into_inner()
 }
 
-fn serialize_tokens(tokens: &[LZ77Token]) -> Vec<u8> {
+#[wasm_bindgen]
+pub fn decompress_brotli(data: &[u8]) -> Vec<u8> {
+    let mut decompressor = brotli::Decompressor::new(data, 4096);
     let mut buffer = Vec::new();
-    for token in tokens {
-        match token {
-            LZ77Token::Literal(byte) => {
-                buffer.push(0);
-                buffer.push(*byte);
-            },
-            LZ77Token::Reference { distance, length } => {
-                buffer.push(1);
-                buffer.push((distance >> 8) as u8);
-                buffer.push((distance & 0xFF) as u8);
-                buffer.push(*length as u8);
-            }
-        }
-    }
+    
+    use std::io::Read;
+    decompressor.read_to_end(&mut buffer).expect("Brotli decompression failed");
     buffer
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_huffman_simple() {
-        let input = b"AAABBC";
-        let compressed = compress(input, Strategy::HuffmanOnly);
-        assert!(!compressed.is_empty());
-    }
-
-    #[test]
-    fn test_lz77_integration() {
-        let input = b"test test test test test test";
-        let compressed = compress(input, Strategy::LZ77Only);
-        assert!(compressed.len() < input.len());
-    }
+#[wasm_bindgen]
+pub fn compress_deflate(data: &[u8]) -> Vec<u8> {
+    use flate2::{write::DeflateEncoder, Compression};
     
-    #[test]
-    fn test_deflate_chain() {
-        let input = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; 
-        let compressed = compress(input, Strategy::Deflate);
-        assert!(compressed.len() < input.len());
-    }
+    let mut encoder = DeflateEncoder::new(Vec::new(), Compression::default());
+    
+    encoder.write_all(data).expect("Deflate compression failed");
+    encoder.finish().expect("Deflate finish failed")
+}
+
+#[wasm_bindgen]
+pub fn decompress_deflate(data: &[u8]) -> Vec<u8> {
+    use flate2::read::DeflateDecoder;
+    use std::io::Read;
+
+    let mut decoder = DeflateDecoder::new(data);
+    let mut buffer = Vec::new();
+    
+    decoder.read_to_end(&mut buffer).expect("Deflate decompression failed");
+    buffer
 }
